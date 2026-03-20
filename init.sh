@@ -175,9 +175,13 @@ else
 cat > timed_scenes.py << 'PYEOF'
 """Manim scenes — one class per narration segment.
 
-Timing is aligned to narration at ~2.5 words/sec. Use the class
-docstring to map spoken phrases to animation cues, and self.wait()
-calls to hold until the next phrase lands.
+Initial timing uses ~2.5 words/sec estimates. After recording voiceover,
+use transcribe_timing.py to get exact word timestamps and replace
+hardcoded waits with CUE-point-based timing.
+
+IMPORTANT: Manim's Text() class has kerning bugs at small font sizes.
+Keep all Text font_size >= 24 to avoid letter bunching. MathTex is not
+affected.
 """
 
 from manim import *
@@ -189,12 +193,19 @@ RED = "#f87171"
 BLUE = "#60a5fa"
 YELLOW = "#facc15"
 WHITE = "#e2e8f0"
+DIM = "#8888a8"
+
+# ── visual delay (seconds) ───────────────────────────────────
+# video starts this many seconds before the audio in each segment,
+# giving the first visual a moment to appear before narration begins.
+VISUAL_DELAY = 1.5
 
 # ── durations (seconds) ──────────────────────────────────────
-# keep in sync with generate_narration.py SEGMENTS and voiceover.sh
+# Start with estimates (~2.5 words/sec + VISUAL_DELAY). After recording
+# voiceover, update to actual durations: voiceover_duration + VISUAL_DELAY.
 DUR = {
-    "intro": 6.0,
-    # "concept": 12.0,
+    "intro": 6.0 + VISUAL_DELAY,
+    # "concept": 12.0 + VISUAL_DELAY,
 }
 
 
@@ -206,19 +217,26 @@ class S01_Intro(Scene):
 
     def construct(self):
         d = DUR["intro"]
-        elapsed = 0
+        e = 0
+
+        self.wait(VISUAL_DELAY); e += VISUAL_DELAY
 
         # "opening line goes here" — title appears with the words
         title = Text("Title", font_size=72, color=WHITE)
-        self.play(FadeIn(title), run_time=0.8)
-        elapsed += 0.8
+        self.play(FadeIn(title), run_time=0.8); e += 0.8
 
         # "second phrase" — hold, then animate when phrase lands ~2.5s
-        self.wait(1.7)
-        elapsed += 1.7
+        self.wait(1.7); e += 1.7
         # ... next animation here ...
 
-        self.wait(max(d - elapsed, 0.1))
+        # ── after recording voiceover, replace waits with CUE points: ──
+        # CUE_PHRASE = 5.2  # from transcribe_timing.py
+        # target_e = VISUAL_DELAY + CUE_PHRASE - 0.8
+        # self.wait(max(target_e - e, 0.1)); e = target_e
+        # self.play(SomeAnimation(...), run_time=0.5); e += 0.5
+
+        self.wait(max(d - e - 1.0, 0.1))
+        # fade_all(self, run_time=1.0)  # uncomment when you have content
 PYEOF
     echo "  created timed_scenes.py"
 fi
@@ -510,9 +528,11 @@ do_composite() {
                 -shortest -movflags +faststart \
                 "\$output_file" 2>/dev/null
         else
+            # pad audio with silence to match video length so -shortest
+            # doesn't clip the ending (video is longer due to VISUAL_DELAY)
             ffmpeg -y -i "\$video_file" -i "\$audio_file" \
                 -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \
-                -af "loudnorm=I=-16:TP=-1.5:LRA=11" \
+                -af "apad,loudnorm=I=-16:TP=-1.5:LRA=11" \
                 -c:a aac -b:a 192k \
                 -shortest -movflags +faststart \
                 "\$output_file" 2>/dev/null
@@ -625,9 +645,11 @@ do_composite_shorts() {
                 -shortest -movflags +faststart \
                 "\$output_file" 2>/dev/null
         else
+            # pad audio with silence to match video length so -shortest
+            # doesn't clip the ending (video is longer due to VISUAL_DELAY)
             ffmpeg -y -i "\$video_file" -i "\$audio_file" \
                 -c:v libx264 -preset fast -crf 18 -pix_fmt yuv420p \
-                -af "loudnorm=I=-16:TP=-1.5:LRA=11" \
+                -af "apad,loudnorm=I=-16:TP=-1.5:LRA=11" \
                 -c:a aac -b:a 192k \
                 -shortest -movflags +faststart \
                 "\$output_file" 2>/dev/null

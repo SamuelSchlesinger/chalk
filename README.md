@@ -423,6 +423,8 @@ self.play(obj.animate.set_fill(GREEN, opacity=0.8))         # color change
 - **partial matches** — if a phrase isn't found verbatim (e.g. you said "the abstraction" but searched for "abstraction"), the tool falls back to single-word partial matching
 
 ### manim
+- **keep `Text()` font_size ≥ 24** — Manim's `Text` class has a known kerning bug where small font sizes cause letters to bunch together with uneven spacing. this is especially visible at 1080p. `MathTex` is not affected. if you need small text, consider using `MathTex(r"\text{...}")` instead
+- **use VISUAL_DELAY** — start each scene with `self.wait(VISUAL_DELAY)` (typically 1.5s) so the first visual has a moment to appear before narration begins. include VISUAL_DELAY in each DUR value and update DUR to match actual voiceover durations after recording
 - **always specify scene names when rendering** — `manim render -ql timed_scenes.py` without a scene name triggers an interactive prompt that breaks automation. render each scene explicitly in a loop
 - **one scene class per segment** — much easier to time than monolithic scenes
 - **networkx layouts are 2d, manim wants 3d** — convert with `{k: [v[0], v[1], 0] for k, v in layout.items()}`
@@ -433,6 +435,7 @@ self.play(obj.animate.set_fill(GREEN, opacity=0.8))         # color change
 - **fade out elements before replacing them** — when transitioning between scene phases, explicitly `FadeOut` text and labels that will be replaced. leaving them on screen (even if partially obscured) causes visual clutter, especially in the narrow 9:16 frame
 
 ### ffmpeg / compositing
+- **`-shortest` clips video endings** — when video is longer than audio (due to VISUAL_DELAY), `-shortest` trims the video, cutting off fade-out animations. fix: add `apad` to the audio filter chain (`-af "apad,loudnorm=..."`) to pad audio with silence to match video length
 - **never use `seq`/`printf` with 08, 09** — bash interprets as invalid octal. hardcode the list
 - **re-encode at both stages** — per-segment and final concat. `-c copy` causes playback freezing
 - **tpad for audio > video** — `tpad=stop_mode=clone:stop_duration=N` freezes last frame. do NOT use `-stream_loop`
