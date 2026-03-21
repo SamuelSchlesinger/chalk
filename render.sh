@@ -4,6 +4,7 @@
 # Usage:
 #   ./render.sh                     — render all landscape scenes at -ql
 #   ./render.sh -qh                 — render all landscape scenes at -qh
+#   ./render.sh -qp                 — render all landscape scenes at -qp (production 1440p60)
 #   ./render.sh -qh S03_Square      — render one scene at -qh
 #   ./render.sh --shorts            — render all shorts scenes at -qh
 #   ./render.sh --shorts -ql        — render all shorts scenes at -ql
@@ -19,7 +20,7 @@ SCENES=()
 # ── parse args ───────────────────────────────────────────────
 while [ $# -gt 0 ]; do
     case "$1" in
-        -ql|-qm|-qh|-qk) QUALITY="$1"; shift ;;
+        -ql|-qm|-qh|-qp|-qk) QUALITY="$1"; shift ;;
         --shorts)         SHORTS=true; shift ;;
         -*)               echo "Unknown flag: $1"; exit 1 ;;
         *)                SCENES+=("$1"); shift ;;
