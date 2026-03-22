@@ -32,6 +32,29 @@ else
     .venv/bin/pip install -q manim f5-tts-mlx soundfile mlx-whisper
 fi
 
+# ── outline.md ───────────────────────────────────────────────
+if [ -f outline.md ]; then
+    echo "  outline.md exists, skipping"
+else
+cat > outline.md << EOF
+# $TITLE
+
+## arc
+(what should the viewer understand after watching? what's the intellectual journey?)
+
+## segments
+
+### intro
+- hook:
+- duration: ~6s
+
+### closing
+- takeaway:
+- duration: ~6s
+EOF
+    echo "  created outline.md"
+fi
+
 # ── script.md ────────────────────────────────────────────────
 if [ -f script.md ]; then
     echo "  script.md exists, skipping"
@@ -917,7 +940,8 @@ fi
 echo ""
 echo "=== chalk project ready ==="
 echo ""
-echo "  script.md              <- write your script here"
+echo "  outline.md             <- collaborative outline — start here"
+echo "  script.md              <- co-authored script — single source of truth"
 echo "  generate_narration.py  <- add segments + voice ref"
 echo "  timed_scenes.py        <- one scene class per segment (landscape)"
 echo "  timed_scenes_shorts.py <- same scenes adapted for 9:16 vertical"

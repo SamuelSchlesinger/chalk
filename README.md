@@ -1,6 +1,6 @@
 # chalk
 
-compose scripted math explainer videos entirely from the command line on macOS.
+collaborate on scripted math explainer videos entirely from the command line on macOS.
 no GUI editors, no drag-and-drop timelines — just python, ffmpeg, and a microphone.
 
 ## quick start
@@ -39,7 +39,8 @@ my-video/
 ├── render.sh                  # render all scenes (handles quality + shorts)
 ├── record-reference.sh        # record your voice reference
 ├── README.md                  # you are here
-├── script.md                  # single source of truth
+├── outline.md                 # collaborative outline — intellectual arc and structure
+├── script.md                  # co-authored script — single source of truth for production
 ├── generate_narration.py      # f5-tts batch generation with explicit durations
 ├── timed_scenes.py            # manim scenes, one class per segment (landscape)
 ├── timed_scenes_shorts.py     # same scenes adapted for 9:16 vertical
@@ -63,11 +64,17 @@ my-video/
 
 ## end-to-end pipeline
 
-### step 0: plan the video
+### step 0: outline the video
 
-**target length:** 3-5 minutes. longer than 5 and you lose people; shorter than 3 and you can't develop ideas.
+work together — human and AI — on `outline.md`. this is where the video's intellectual structure gets worked out before anyone writes spoken lines or animation cues.
 
-**segment count:** 10-25 segments of 4-20 seconds each.
+the outline takes whatever shape the video needs. a pedagogical blueprint with numbered sections and pacing notes. a narrative arc with bullet points tracing a personal journey. a proof skeleton with key lemmas and visual ideas. don't force a format — let the content dictate the structure.
+
+what the outline should answer:
+- what should the viewer understand after watching?
+- what's the intellectual arc — where do we start, where do we end?
+- what are the segments, roughly, and what does each one accomplish?
+- how long is the video? (target 3-5 minutes — longer than 5 and you lose people, shorter than 3 and you can't develop ideas)
 
 **duration estimation:** word count / 2.5 ≈ speech duration in seconds (for TTS). if you are recording voiceover, this will vary — use actual recorded durations as feedback and adjust timing accordingly.
 
@@ -80,7 +87,11 @@ my-video/
 
 ### step 1: write the script
 
-write everything in `script.md`. interleave three kinds of content:
+with the outline as a guide, collaboratively draft `script.md`. human and AI each write sections, then edit each other's work, going back and forth until the voice is right. the human's voice is the critical value add — anyone can ask an AI for their video ideas, so the distinctive perspective and editorial judgment of the human author is what makes the video worth watching.
+
+**the author-review-revise loop:** iterate on the script until it reaches a fixed point — accurate, high quality, and meeting the author's goals. the AI should fact-check its own contributions (definitions, theorem statements, attributions, dates) and flag anything it's uncertain about. the human reviews for voice, correctness, and whether the explanation actually lands. revise, re-review, repeat. the script is done when neither party has changes to make.
+
+interleave three kinds of content in `script.md`:
 
 - **spoken lines** — plain text, lowercase, precise
 - **`> [MANIM:]` cues** — what animation plays during this section
@@ -118,7 +129,7 @@ good: "the square root of two is irrational."
 
 #### LLM-isms to avoid
 
-since these scripts are written with AI assistance, they tend to pick up identifiable AI writing tics. watch for these and rewrite when you spot them. (see [wikipedia's field guide](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) for the full taxonomy.)
+since these scripts are co-authored with AI, the AI-contributed sections tend to pick up identifiable writing tics. both the human editor and the AI should watch for these — the AI should actively avoid producing them, and the human should rewrite any that slip through. the human voice is what makes these videos worth watching over just asking the AI directly. (see [wikipedia's field guide](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) for the full taxonomy.)
 
 **significance inflation.** LLMs love to tell the audience how important something is rather than showing why. words like "remarkable", "profound", "elegant", "pivotal", "crucial", "key" are flags. if something is remarkable, the explanation should make the viewer feel that — you shouldn't need the adjective.
 
@@ -168,12 +179,13 @@ good: "their states become correlated in ways that classical probability cannot 
 
 #### keeping files in sync
 
-the script is the **single source of truth**:
+the outline feeds the script, and the script feeds production:
 ```
-script.md
-    ├── generate_narration.py   — spoken text + durations
-    ├── timed_scenes.py         — animation content + durations
-    └── voiceover.sh            — segment mapping + script text
+outline.md                      ← collaborative planning
+    └── script.md               ← co-authored (single source of truth for production)
+            ├── generate_narration.py   — spoken text + durations
+            ├── timed_scenes.py         — animation content + durations
+            └── voiceover.sh            — segment mapping + script text
 ```
 
 **when you change a spoken line:** update script.md, update SEGMENTS in generate_narration.py, `rm clips/XX_name.wav`, re-run `python generate_narration.py`, update DUR in timed_scenes.py if duration changed.
@@ -451,7 +463,7 @@ self.play(obj.animate.set_fill(GREEN, opacity=0.8))         # color change
 
 ### workflow
 - **iterate at 8 steps / `-ql`** — 5-10x faster than production. check timing before committing
-- **script is the single source of truth** — all other files derive from it
+- **outline feeds script, script feeds production** — the outline is where intellectual structure gets worked out collaboratively; the script is the single source of truth for all production files
 - **voice reference recording matters** — the AI clones cadence and energy, not just timbre
 - **line up visuals with narration** — animations should appear in sync with the words describing them. if you say "square both sides" while the equation is already on screen, it feels disconnected. for voiceover, use `transcribe_timing.py` to get exact word timestamps and drive animation timing with `CUE_*` constants rather than guessing
 - **abrupt audio cuts between segments are jarring** — each TTS segment starts cold, so back-to-back segments can sound choppy. use brief pauses (0.3-0.5s silence) between segments in concatenation, and keep vocal energy consistent across segments by using the same reference audio and cfg_strength
