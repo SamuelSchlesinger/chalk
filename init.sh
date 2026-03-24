@@ -351,7 +351,7 @@ OUT="\$BASE/output"
 # ── auto-detect render quality ───────────────────────────────
 # check from highest to lowest quality
 VIDEO=""
-for q in 2160p60 1080p60 720p30 480p15; do
+for q in 2160p60 1440p60 1080p60 720p30 480p15; do
     if [ -d "\$BASE/media/videos/timed_scenes/\$q" ]; then
         VIDEO="\$BASE/media/videos/timed_scenes/\$q"
         break
