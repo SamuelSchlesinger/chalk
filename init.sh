@@ -5,7 +5,7 @@
 #   ./init.sh "video title"
 #
 # Creates .venv, clips/, output/, and starter files (script.md,
-# generate_narration.py, timed_scenes.py, voiceover.sh).
+# timed_scenes.py, voiceover.sh).
 # Safe to re-run — skips files that already exist.
 
 set -euo pipefail
@@ -29,7 +29,7 @@ if [ -d .venv ]; then
 else
     echo "  creating .venv..."
     python3 -m venv .venv
-    .venv/bin/pip install -q manim f5-tts-mlx soundfile mlx-whisper
+    .venv/bin/pip install -q manim mlx-whisper
 fi
 
 # ── outline.md ───────────────────────────────────────────────
@@ -81,114 +81,6 @@ cat > script.md << EOF
 > fade to black
 EOF
     echo "  created script.md"
-fi
-
-# ── generate_narration.py ────────────────────────────────────
-if [ -f generate_narration.py ]; then
-    echo "  generate_narration.py exists, skipping"
-else
-cat > generate_narration.py << 'PYEOF'
-"""Generate all narration segments with explicit durations."""
-
-from f5_tts_mlx.generate import generate
-import subprocess
-import os
-
-CLIPS = "clips"
-
-REF_AUDIO = "clips/my_voice_ref_24k.wav"
-REF_TEXT = (
-    "replace this with the exact transcription of your reference audio"
-)
-REF_DUR = 12.25  # duration of reference audio in seconds
-
-STEPS = 32   # 8=draft, 32=production
-CFG = 3.5    # voice adherence (3.5 is the sweet spot)
-
-# ── segments ──────────────────────────────────────────────────
-# (filename, spoken text, duration in seconds)
-# rule of thumb: ~2.5 words/sec at natural pace
-SEGMENTS = [
-    ("01_intro", "opening line goes here", 6.0),
-    # add segments here...
-    # ("02_concept", "explanation text", 12.0),
-]
-
-
-def generate_segment(name, text, speech_duration):
-    out_path = f"{CLIPS}/{name}.wav"
-    if os.path.exists(out_path):
-        print(f"  skipping {name} (exists)")
-        return out_path
-
-    total_duration = REF_DUR + speech_duration
-    print(f"  generating {name} ({speech_duration}s speech, {total_duration}s total)...")
-    generate(
-        generation_text=text,
-        ref_audio_path=REF_AUDIO,
-        ref_audio_text=REF_TEXT,
-        duration=total_duration,
-        speed=1.0,
-        steps=STEPS,
-        cfg_strength=CFG,
-        output_path=out_path,
-    )
-    print(f"  done: {name}")
-    return out_path
-
-
-def concatenate_audio(segment_files, output_path):
-    silence = f"{CLIPS}/_silence.wav"
-    subprocess.run([
-        "ffmpeg", "-y", "-f", "lavfi", "-i",
-        "anullsrc=r=24000:cl=mono", "-t", "0.5",
-        "-c:a", "pcm_s16le", silence,
-    ], capture_output=True)
-
-    list_path = f"{CLIPS}/_concat_list.txt"
-    with open(list_path, "w") as f:
-        for i, seg in enumerate(segment_files):
-            f.write(f"file '{seg}'\n")
-            if i < len(segment_files) - 1:
-                f.write(f"file '{silence}'\n")
-
-    subprocess.run([
-        "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-        "-i", list_path, "-c:a", "pcm_s16le", output_path,
-    ], capture_output=True)
-    print(f"full narration: {output_path}")
-
-
-def main():
-    os.makedirs(CLIPS, exist_ok=True)
-
-    print("generating narration segments...")
-    segment_files = []
-    for name, text, dur in SEGMENTS:
-        path = generate_segment(name, text, dur)
-        segment_files.append(path)
-
-    full_narration = f"{CLIPS}/full_narration.wav"
-    print("\nconcatenating...")
-    concatenate_audio(segment_files, full_narration)
-
-    # verify durations
-    print("\nsegment durations:")
-    import soundfile as sf
-    total = 0
-    for name, _, _ in SEGMENTS:
-        path = f"{CLIPS}/{name}.wav"
-        data, sr = sf.read(path)
-        dur = len(data) / sr
-        total += dur
-        print(f"  {name}: {dur:.1f}s")
-    print(f"  TOTAL: {total:.1f}s")
-
-
-if __name__ == "__main__":
-    main()
-PYEOF
-    echo "  created generate_narration.py"
 fi
 
 # ── timed_scenes.py ──────────────────────────────────────────
@@ -295,7 +187,7 @@ YELLOW = "#facc15"
 WHITE = "#e2e8f0"
 
 # ── durations (seconds) ──────────────────────────────────────
-# keep in sync with generate_narration.py SEGMENTS and voiceover.sh
+# keep in sync with voiceover.sh
 DUR = {
     "intro": 6.0,
     # "concept": 12.0,
@@ -340,7 +232,8 @@ cat > voiceover.sh << SHEOF
 # Usage:
 #   ./voiceover.sh record          — record all segments
 #   ./voiceover.sh record 05       — record just segment 05
-#   ./voiceover.sh composite       — composite (prefers voiceover > TTS)
+#   ./voiceover.sh record-from 05  — record from segment 05 onwards
+#   ./voiceover.sh composite       — composite segments
 #   ./voiceover.sh durations       — compare voiceover vs video durations
 #   ./voiceover.sh play 05         — preview segment 05 video
 
@@ -512,18 +405,10 @@ do_composite() {
     for entry in "\${SEGMENTS[@]}"; do
         IFS=: read -r num scene audio desc <<< "\$entry"
         local video_file="\$VIDEO/\${scene}.mp4"
-        local vo_file="\$CLIPS/vo_\${audio}.wav"
-        local tts_file="\$CLIPS/\${audio}.wav"
+        local audio_file="\$CLIPS/vo_\${audio}.wav"
         local output_file="\$OUT/segments/seg_\${num}.mp4"
 
-        # prefer voiceover, fall back to TTS
-        if [ -f "\$vo_file" ]; then
-            audio_file="\$vo_file"
-            src="voice"
-        elif [ -f "\$tts_file" ]; then
-            audio_file="\$tts_file"
-            src="TTS"
-        else
+        if [ ! -f "\$audio_file" ]; then
             echo "WARNING: no audio for segment \$num"
             continue
         fi
@@ -533,7 +418,7 @@ do_composite() {
             continue
         fi
 
-        echo "  \$num (\$scene + \$src)..."
+        echo "  \$num (\$scene)..."
 
         # if audio is longer than video, freeze last frame
         adur=\$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "\$audio_file" 2>/dev/null)
@@ -630,18 +515,10 @@ do_composite_shorts() {
     for entry in "\${SEGMENTS[@]}"; do
         IFS=: read -r num scene audio desc <<< "\$entry"
         local video_file="\$SHORTS_VIDEO/\${scene}.mp4"
-        local vo_file="\$CLIPS/vo_\${audio}.wav"
-        local tts_file="\$CLIPS/\${audio}.wav"
+        local audio_file="\$CLIPS/vo_\${audio}.wav"
         local output_file="\$SHORTS_OUT/segments/seg_\${num}.mp4"
 
-        # prefer voiceover, fall back to TTS
-        if [ -f "\$vo_file" ]; then
-            audio_file="\$vo_file"
-            src="voice"
-        elif [ -f "\$tts_file" ]; then
-            audio_file="\$tts_file"
-            src="TTS"
-        else
+        if [ ! -f "\$audio_file" ]; then
             echo "WARNING: no audio for segment \$num"
             continue
         fi
@@ -651,7 +528,7 @@ do_composite_shorts() {
             continue
         fi
 
-        echo "  \$num (\$scene + \$src)..."
+        echo "  \$num (\$scene)..."
 
         adur=\$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "\$audio_file" 2>/dev/null)
         vdur=\$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "\$video_file" 2>/dev/null)
@@ -750,6 +627,35 @@ case "\${1:-}" in
             do_durations
         fi
         ;;
+    record-from)
+        if [ -z "\${2:-}" ]; then
+            echo "Usage: \$0 record-from <segment_number>"
+            exit 1
+        fi
+        echo "=== voiceover recording session (from segment \$2) ==="
+        echo "Each segment: see script -> video autoplays -> speak along."
+        echo "Press ENTER to stop recording. 's' to skip."
+        echo ""
+        started=false
+        idx=0
+        for entry in "\${SEGMENTS[@]}"; do
+            IFS=: read -r num scene audio desc <<< "\$entry"
+            if [ "\$num" = "\$2" ]; then
+                started=true
+            fi
+            if \$started; then
+                record_segment "\$num" "\$scene" "\$audio" "\$desc" "\$idx"
+            fi
+            idx=\$((idx + 1))
+        done
+        if ! \$started; then
+            echo "Unknown segment: \$2"
+            exit 1
+        fi
+        echo ""
+        echo "=== all segments recorded ==="
+        do_durations
+        ;;
     composite)
         do_composite
         ;;
@@ -780,8 +686,9 @@ case "\${1:-}" in
         echo "Usage:"
         echo "  \$0 record              — record all segments (video autoplays)"
         echo "  \$0 record 05           — record just segment 05"
+        echo "  \$0 record-from 05      — record from segment 05 onwards"
         echo "  \$0 durations           — compare voiceover vs video durations"
-        echo "  \$0 composite           — composite landscape (prefers voiceover > TTS)"
+        echo "  \$0 composite           — composite landscape"
         echo "  \$0 composite-shorts    — composite shorts (1080x1920 vertical)"
         echo "  \$0 play 05             — preview segment 05 video"
         echo ""
@@ -942,7 +849,6 @@ echo "=== chalk project ready ==="
 echo ""
 echo "  outline.md             <- collaborative outline — start here"
 echo "  script.md              <- co-authored script — single source of truth"
-echo "  generate_narration.py  <- add segments + voice ref"
 echo "  timed_scenes.py        <- one scene class per segment (landscape)"
 echo "  timed_scenes_shorts.py <- same scenes adapted for 9:16 vertical"
 echo "  transcribe_timing.py   <- whisper-based voiceover timing analysis"
@@ -952,8 +858,7 @@ echo "  clips/"
 echo "  output/"
 echo "  .venv/"
 echo ""
-echo "next: activate the venv and record a voice reference"
+echo "next: activate the venv and start working"
 echo "  source .venv/bin/activate"
-echo "  ./record-reference.sh clips"
 echo ""
-echo "then: edit script.md, fill in generate_narration.py, and go!"
+echo "then: edit script.md, build scenes, record voiceover, and go!"

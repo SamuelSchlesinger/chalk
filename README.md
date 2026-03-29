@@ -24,7 +24,6 @@ then follow the pipeline below.
 | tool | purpose | install |
 |------|---------|---------|
 | manim CE | math/diagram animations | `pip install manim` + `brew install ffmpeg cairo pango` + LaTeX |
-| f5-tts-mlx | voice cloning/synthesis on apple silicon | `pip install f5-tts-mlx` |
 | ffmpeg | audio/video compositing, format conversion | `brew install ffmpeg` |
 | sox | audio recording from terminal | `brew install sox` |
 | mlx-whisper | word-level transcription for timing sync | `pip install mlx-whisper` |
@@ -37,20 +36,15 @@ then follow the pipeline below.
 my-video/
 ├── init.sh                    # run once to set up the project
 ├── render.sh                  # render all scenes (handles quality + shorts)
-├── record-reference.sh        # record your voice reference
 ├── README.md                  # you are here
 ├── outline.md                 # collaborative outline — intellectual arc and structure
 ├── script.md                  # co-authored script — single source of truth for production
-├── generate_narration.py      # f5-tts batch generation with explicit durations
 ├── timed_scenes.py            # manim scenes, one class per segment (landscape)
 ├── timed_scenes_shorts.py     # same scenes adapted for 9:16 vertical
 ├── transcribe_timing.py       # whisper-based voiceover timing analysis
 ├── voiceover.sh               # record yourself, composite, check durations
 ├── clips/                     # audio
-│   ├── my_voice_ref.wav           # raw mic recording
-│   ├── my_voice_ref_24k.wav       # resampled for f5-tts
-│   ├── 01_intro.wav               # generated narration segments
-│   ├── vo_01_intro.wav            # voiceover recordings (optional)
+│   ├── vo_01_intro.wav            # voiceover recordings
 │   └── ...
 ├── output/                    # final product
 │   ├── segments/                  # individual composited segments
@@ -74,9 +68,9 @@ what the outline should answer:
 - what should the viewer understand after watching?
 - what's the intellectual arc — where do we start, where do we end?
 - what are the segments, roughly, and what does each one accomplish?
-- how long is the video? (target 3-5 minutes — longer than 5 and you lose people, shorter than 3 and you can't develop ideas)
+- how long is the video?
 
-**duration estimation:** word count / 2.5 ≈ speech duration in seconds (for TTS). if you are recording voiceover, this will vary — use actual recorded durations as feedback and adjust timing accordingly.
+**duration estimation:** word count / 2.5 ≈ speech duration in seconds at natural pace. use actual recorded durations as feedback and adjust timing accordingly.
 
 | words | duration | good for |
 |-------|----------|----------|
@@ -166,14 +160,13 @@ good: "their states become correlated in ways that classical probability cannot 
 
 **heading = segment boundary.** each `##` heading maps to one narration segment, one manim scene class, and one composited video file.
 
-**spoken lines are lowercase, precise.** write like you're explaining to a smart friend, then trim. these go verbatim into `generate_narration.py`.
+**spoken lines are lowercase, precise.** write like you're explaining to a smart friend, then trim. these go verbatim into `voiceover.sh` as recording prompts.
 
 **naming consistency:**
 
 | file | pattern | example |
 |------|---------|---------|
 | `script.md` | `## heading` | `## square both sides` |
-| `generate_narration.py` | `"03_square"` | filename stem |
 | `timed_scenes.py` | `class S03_Square(Scene)` + `DUR["square"]` | class + dict key |
 | `voiceover.sh` | `"03:S03_Square:03_square:description"` | id:class:audio:desc |
 
@@ -183,57 +176,15 @@ the outline feeds the script, and the script feeds production:
 ```
 outline.md                      ← collaborative planning
     └── script.md               ← co-authored (single source of truth for production)
-            ├── generate_narration.py   — spoken text + durations
             ├── timed_scenes.py         — animation content + durations
             └── voiceover.sh            — segment mapping + script text
 ```
 
-**when you change a spoken line:** update script.md, update SEGMENTS in generate_narration.py, `rm clips/XX_name.wav`, re-run `python generate_narration.py`, update DUR in timed_scenes.py if duration changed.
+**when you change a spoken line:** update script.md, update SCRIPTS in voiceover.sh, re-record the segment, update DUR in timed_scenes.py if duration changed.
 
-**when you add a segment:** add to all four files. use "b" suffixes for insertions (e.g. `03b_square`).
+**when you add a segment:** add to all three files. use "b" suffixes for insertions (e.g. `03b_square`).
 
-### step 2: record reference audio
-
-record 8-12 seconds of yourself reading a line from the script:
-
-```bash
-# use the helper script
-./record-reference.sh clips
-
-# or manually
-rec clips/my_voice_ref.wav
-# read your line, then Ctrl+C after ~1s silence
-ffmpeg -y -i clips/my_voice_ref.wav -ac 1 -ar 24000 -sample_fmt s16 clips/my_voice_ref_24k.wav
-```
-
-**rules:**
-- 8-12 seconds (model clips beyond ~12s internally)
-- ~1 second silence at the end
-- speak in the tone/pace you want — the model clones style, not just timbre
-- clean audio, no background noise, no clipping
-- transcription must be exact — model uses text/audio ratio for timing
-
-### step 3: generate narration
-
-edit `generate_narration.py` — update `REF_AUDIO`, `REF_TEXT`, `REF_DUR`, and `SEGMENTS`.
-
-```bash
-python generate_narration.py
-```
-
-**critical: use explicit `duration`, never `estimate_duration=True`.** the estimator frequently overshoots — we've seen 103 seconds of audio for an 8-second line.
-
-to regenerate one segment: `rm clips/09_name.wav && python generate_narration.py`
-
-**quality/speed tradeoffs (M4 48GB):**
-
-| steps | quality | time per ~10s |
-|-------|---------|---------------|
-| 8 | draft | ~10s |
-| 32 | high | ~1 min |
-| 64 | max | ~2 min (diminishing returns) |
-
-### step 4: build timed animations
+### step 2: build timed animations
 
 edit `timed_scenes.py` — one scene class per segment, durations from DUR dict.
 
@@ -241,9 +192,9 @@ edit `timed_scenes.py` — one scene class per segment, durations from DUR dict.
 - `DUR` dict at top — durations defined once, referenced by descriptive key
 - elapsed time tracking in comments — `self.wait(max(d - elapsed, 0.1))` at end
 - scene naming: `S01_Intro`, `S03_Square` — number prefix for order, name for content
-- **sync visuals to narration** — use the class docstring to write out the spoken text with `|` delimiters between phrases. for TTS, estimate when each phrase lands (~2.5 words/sec) and place `self.wait()` calls accordingly. for voiceover, use `transcribe_timing.py` (step 6b) to get exact word timestamps, then use `CUE_*` constants: `self.wait(max(CUE - elapsed - run_time, 0.1))`. this ensures each visual appears as the viewer hears it described
+- **sync visuals to narration** — use the class docstring to write out the spoken text with `|` delimiters between phrases. start with word-count estimates (~2.5 words/sec) and place `self.wait()` calls accordingly. after recording voiceover, use `transcribe_timing.py` (step 4b) to get exact word timestamps, then use `CUE_*` constants: `self.wait(max(CUE - elapsed - run_time, 0.1))`. this ensures each visual appears as the viewer hears it described
 
-### step 5: render animations
+### step 3: render animations
 
 ```bash
 # all scenes, fast iteration
@@ -264,7 +215,7 @@ edit `timed_scenes.py` — one scene class per segment, durations from DUR dict.
 
 `render.sh` auto-discovers scene classes from `timed_scenes.py`, activates the venv, and loops through them. no need to maintain a separate scene list.
 
-### step 5b: render shorts animations (optional)
+### step 3b: render shorts animations (optional)
 
 `timed_scenes_shorts.py` is adapted for the 9:16 vertical frame. `init.sh` scaffolds it for you — adapt each scene from `timed_scenes.py` with layout changes for the narrow vertical frame.
 
@@ -294,7 +245,7 @@ edit `timed_scenes.py` — one scene class per segment, durations from DUR dict.
 - elements placed with `LEFT * 2` / `RIGHT * 2` are near the frame edge (frame is only ±2.25 wide)
 - test with `-ql` first — vertical rendering is the same speed as landscape
 
-### step 6: record voiceover (optional)
+### step 4: record voiceover
 
 ```bash
 # record all segments (video autoplays while you speak)
@@ -303,6 +254,9 @@ edit `timed_scenes.py` — one scene class per segment, durations from DUR dict.
 # record just one segment
 ./voiceover.sh record 05
 
+# record from segment 05 onwards (skipping earlier segments)
+./voiceover.sh record-from 05
+
 # check duration mismatches
 ./voiceover.sh durations
 
@@ -310,11 +264,11 @@ edit `timed_scenes.py` — one scene class per segment, durations from DUR dict.
 ./voiceover.sh play 05
 ```
 
-voiceover files (`vo_*.wav`) take priority over TTS during compositing. only re-record segments you want to replace.
+only re-record segments you want to replace.
 
-### step 6b: sync animations to voiceover with whisper
+### step 4b: sync animations to voiceover with whisper
 
-when you record voiceover at your natural pace, the animations (timed to TTS estimates) will be out of sync. `transcribe_timing.py` uses whisper to extract word-level timestamps from your recordings, so you can place animations exactly where you say the corresponding words.
+when you record voiceover at your natural pace, the animations (timed to word-count estimates) will be out of sync. `transcribe_timing.py` uses whisper to extract word-level timestamps from your recordings, so you can place animations exactly where you say the corresponding words.
 
 ```bash
 # transcribe a segment, find when key phrases are spoken
@@ -359,10 +313,10 @@ the pattern: `self.wait(max(CUE - elapsed - run_time, 0.1))` ensures the animati
 6. `./voiceover.sh composite` — check the result
 7. repeat 3-6 as needed
 
-### step 7: composite and concatenate
+### step 5: composite and concatenate
 
 ```bash
-# composite landscape with whatever audio exists (prefers voiceover > TTS)
+# composite landscape
 ./voiceover.sh composite
 
 # composite shorts (uses same audio, different video from timed_scenes_shorts)
@@ -406,27 +360,7 @@ self.play(obj.animate.set_fill(GREEN, opacity=0.8))         # color change
 | `-qh` | 1920x1080 | 60 | final render |
 | `-qk` | 3840x2160 | 60 | 4K final |
 
-## f5-tts-mlx parameter reference
-
-| parameter | default | recommended | notes |
-|-----------|---------|-------------|-------|
-| `steps` | 8 | 32 | 8=draft, 32=production, 64=diminishing returns |
-| `cfg_strength` | 2.0 | 3.5 | voice adherence. higher = more like reference |
-| `speed` | 1.0 | 1.0 | speech rate |
-| `method` | "rk4" | "rk4" | solver. rk4 is best quality |
-| `seed` | None | set for reproducibility | |
-
 ## lessons learned
-
-### f5-tts-mlx
-- **never use `estimate_duration=True`** — causes massive overshooting and hallucinated speech
-- **max output length is ~31 seconds** — the model has an effective context limit of ~43s total (reference + generated audio). if your segment needs more than ~30s of speech, split it into sub-segments of 10-15s each and concatenate with ffmpeg. all sub-segments hitting the exact same output length (e.g. 31.48s) is a sign you've hit this limit
-- **keep segments under ~60 words** — segments with 70+ words tend to hit the output length cap. for standalone shorts (30-60s), always split into 2-5 sub-segments
-- **transcription accuracy is critical** — wrong text = garbled output
-- **spell out variable names phonetically** — TTS can't pronounce single letters well. "a" sounds like filler, "b" is ambiguous. use greek letters in spoken text: "alpha", "beta", "kappa". the manim visuals can show the corresponding symbols (α, β, κ)
-- **cfg_strength=3.5** — sweet spot for cloning. below 2.0 sounds generic, above 4.0 sounds overfit
-- **reference audio must be 24kHz mono** — model hard-errors on anything else
-- **8-12 seconds of clean reference** — more isn't better (model clips at 12s)
 
 ### whisper (transcribe_timing.py)
 - **use `--phrases` for targeted lookup** — transcribing a full segment dumps hundreds of words. `--phrases` scans for multi-word matches and prints just the cue points you need
@@ -459,11 +393,9 @@ self.play(obj.animate.set_fill(GREEN, opacity=0.8))         # color change
 - **stack, don't spread** — the frame is only ~4.5 units wide. anything side-by-side in landscape should be stacked vertically
 - **increase vertical spacing** — larger text takes more room. use `buff=0.8-1.0` instead of `0.6-0.8`
 - **watch for overlap** — fractions (`\frac{}{}`) are tall. increase `UP/DOWN` shifts between equations
-- **same audio, different video** — `composite-shorts` reuses the same TTS/voiceover clips with the shorts-rendered video
+- **same audio, different video** — `composite-shorts` reuses the same voiceover clips with the shorts-rendered video
 
 ### workflow
-- **iterate at 8 steps / `-ql`** — 5-10x faster than production. check timing before committing
+- **iterate at `-ql`** — much faster than production quality. check timing before committing
 - **outline feeds script, script feeds production** — the outline is where intellectual structure gets worked out collaboratively; the script is the single source of truth for all production files
-- **voice reference recording matters** — the AI clones cadence and energy, not just timbre
-- **line up visuals with narration** — animations should appear in sync with the words describing them. if you say "square both sides" while the equation is already on screen, it feels disconnected. for voiceover, use `transcribe_timing.py` to get exact word timestamps and drive animation timing with `CUE_*` constants rather than guessing
-- **abrupt audio cuts between segments are jarring** — each TTS segment starts cold, so back-to-back segments can sound choppy. use brief pauses (0.3-0.5s silence) between segments in concatenation, and keep vocal energy consistent across segments by using the same reference audio and cfg_strength
+- **line up visuals with narration** — animations should appear in sync with the words describing them. if you say "square both sides" while the equation is already on screen, it feels disconnected. use `transcribe_timing.py` to get exact word timestamps and drive animation timing with `CUE_*` constants rather than guessing
