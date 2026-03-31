@@ -64,3 +64,16 @@ See README.md "manim reference" and "lessons learned" for the full list. The mos
 - **Specify scene names when rendering.** Omitting triggers an interactive prompt that breaks automation.
 - **Manim caches aggressively.** Delete the output .mp4 if re-rendering doesn't pick up changes.
 - **Shorts: double font sizes, stack vertically.** Frame is only ~4.5 units wide. See README "shorts" section.
+
+## improving chalk itself
+
+Chalk is a living tool, not a frozen template. When working on a video project and you discover something that would systematically improve productivity, video quality, or process — a better Manim pattern, a workflow shortcut, a fix for a rendering gotcha, a new lesson learned — **make a PR back to chalk**.
+
+Examples of things worth upstreaming:
+- Bug workarounds or gotchas discovered during production (like the font kerning fix)
+- New animation patterns that proved effective across multiple scenes
+- Improvements to render.sh, voiceover.sh, or transcribe_timing.py
+- Updates to this CLAUDE.md or README.md based on what actually helped vs. what was noise
+- New tooling (e.g. a scene preview script, a duration estimator)
+
+The bar is: would this help the next video project start in a better place? If yes, PR it. Keep chalk sharp.
