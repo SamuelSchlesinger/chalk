@@ -10,14 +10,14 @@ no GUI editors, no drag-and-drop timelines — just python, ffmpeg, and a microp
 git clone <your-chalk-repo-url> my-video
 cd my-video
 
-# initialize the project
-./init.sh "sqrt 2 is irrational"
+# set up environment (venv, system deps, directories)
+./setup.sh
 
 # activate venv and start working
 source .venv/bin/activate
 ```
 
-then follow the pipeline below.
+edit outline.md, script.md, and timed_scenes.py for your video, then follow the pipeline below.
 
 ## toolchain
 
@@ -28,21 +28,22 @@ then follow the pipeline below.
 | sox | audio recording from terminal | `brew install sox` |
 | mlx-whisper | word-level transcription for timing sync | `pip install mlx-whisper` |
 
-`init.sh` creates a `.venv` and installs the python dependencies for you.
+`setup.sh` creates a `.venv` and installs the python dependencies for you.
 
 ## project structure
 
 ```
 my-video/
-├── init.sh                    # run once to set up the project
-├── render.sh                  # render all scenes (handles quality + shorts)
+├── CLAUDE.md                  # agent guidance (read by Claude Code)
 ├── README.md                  # you are here
+├── setup.sh                   # run once to set up environment
+├── render.sh                  # render all scenes (handles quality + shorts)
+├── voiceover.sh               # record yourself, composite, check durations
+├── transcribe_timing.py       # whisper-based voiceover timing analysis
 ├── outline.md                 # collaborative outline — intellectual arc and structure
 ├── script.md                  # co-authored script — single source of truth for production
 ├── timed_scenes.py            # manim scenes, one class per segment (landscape)
 ├── timed_scenes_shorts.py     # same scenes adapted for 9:16 vertical
-├── transcribe_timing.py       # whisper-based voiceover timing analysis
-├── voiceover.sh               # record yourself, composite, check durations
 ├── clips/                     # audio
 │   ├── vo_01_intro.wav            # voiceover recordings
 │   └── ...
@@ -217,7 +218,7 @@ edit `timed_scenes.py` — one scene class per segment, durations from DUR dict.
 
 ### step 3b: render shorts animations (optional)
 
-`timed_scenes_shorts.py` is adapted for the 9:16 vertical frame. `init.sh` scaffolds it for you — adapt each scene from `timed_scenes.py` with layout changes for the narrow vertical frame.
+`timed_scenes_shorts.py` is adapted for the 9:16 vertical frame. adapt each scene from `timed_scenes.py` with layout changes for the narrow vertical frame.
 
 ```bash
 # all shorts scenes
@@ -333,12 +334,32 @@ the composite step:
 
 ### useful primitives
 
-- `MathTex(r"...")` — LaTeX math. `{{ }}` double braces for sub-part morphing
-- `Text("...", font="Courier New")` — plain text
+- `MathTex(r"...")` — LaTeX math (no kerning issues). `{{ }}` double braces for sub-part morphing
+- `Text("...", font=FONT_TEXT)` — plain text. always pass `font=` explicitly (see fonts section below)
 - `Arrow(start, end)` — animate with `GrowArrow()`
 - `Graph(vertices, edges, layout=...)` — network graphs
 - `SurroundingRectangle(obj)` — highlight box
 - `VGroup(a, b, c)` — group for collective animation
+
+### fonts
+
+MathTex renders through LaTeX and is immune to kerning bugs. Text() renders through Pango/Cairo and has a known kerning bug with some fonts at small sizes. Always use explicit font configuration:
+
+```python
+# defined at the top of timed_scenes.py
+FONT_TEXT = "Helvetica"       # regular text — ships with macOS, safe kerning
+FONT_MONO = "Courier New"    # code snippets, labels — ships with macOS
+
+# usage
+Text("hello", font=FONT_TEXT, font_size=48, color=WHITE)
+Text("x = 42", font=FONT_MONO, font_size=36, color=GREEN)
+MathTex(r"\sqrt{2}")  # no font= needed, uses LaTeX
+```
+
+rules:
+- **always pass `font=`** to `Text()` — Manim's default font has a kerning bug where letters bunch together at small sizes (verified at 1080p). specifying any named font avoids it
+- use `MathTex(r"\text{...}")` instead of `Text()` when font_size < 24
+- Helvetica and Courier New ship with macOS. if you install additional fonts, Inter and JetBrains Mono are good upgrades
 
 ### animation patterns
 
@@ -369,7 +390,8 @@ self.play(obj.animate.set_fill(GREEN, opacity=0.8))         # color change
 - **partial matches** — if a phrase isn't found verbatim (e.g. you said "the abstraction" but searched for "abstraction"), the tool falls back to single-word partial matching
 
 ### manim
-- **keep `Text()` font_size ≥ 24** — Manim's `Text` class has a known kerning bug where small font sizes cause letters to bunch together with uneven spacing. this is especially visible at 1080p. `MathTex` is not affected. if you need small text, consider using `MathTex(r"\text{...}")` instead
+- **always pass `font=FONT_TEXT` to `Text()`** — the default font triggers kerning bugs. use Helvetica or another tested sans-serif. see "fonts" section above
+- **keep `Text()` font_size ≥ 24** — Manim's `Text` class has a known kerning bug where small font sizes cause letters to bunch together with uneven spacing. this is especially visible at 1080p. `MathTex` is not affected. if you need small text, use `MathTex(r"\text{...}")` instead
 - **use VISUAL_DELAY** — start each scene with `self.wait(VISUAL_DELAY)` (typically 1.5s) so the first visual has a moment to appear before narration begins. include VISUAL_DELAY in each DUR value and update DUR to match actual voiceover durations after recording
 - **always specify scene names when rendering** — `manim render -ql timed_scenes.py` without a scene name triggers an interactive prompt that breaks automation. render each scene explicitly in a loop
 - **one scene class per segment** — much easier to time than monolithic scenes
