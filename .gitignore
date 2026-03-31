@@ -1,0 +1,6 @@
+.venv/
+media/
+clips/
+output/
+__pycache__/
+*.pyc
