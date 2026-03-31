@@ -15,12 +15,8 @@ mkdir -p clips output/segments
 echo "  clips/ and output/ ready"
 
 # ── system dependencies ──────────────────────────────────────
-if ! command -v ffmpeg &>/dev/null || ! command -v sox &>/dev/null; then
-    echo "  installing system deps (ffmpeg, cairo, pango, sox)..."
-    brew install ffmpeg cairo pango sox
-else
-    echo "  system deps already installed"
-fi
+echo "  ensuring system deps (ffmpeg, cairo, pango, sox)..."
+brew install ffmpeg cairo pango sox 2>/dev/null
 
 # ── python venv ──────────────────────────────────────────────
 if [ -d .venv ]; then

@@ -356,7 +356,7 @@ Text("x = 42", font=FONT_MONO, font_size=36, color=GREEN)
 MathTex(r"\sqrt{2}")  # no font= needed, uses LaTeX
 ```
 
-rules:
+Rules:
 - **always pass `font=`** to `Text()` — Manim's default font has a kerning bug where letters bunch together at small sizes (verified at 1080p). specifying any named font avoids it
 - use `MathTex(r"\text{...}")` instead of `Text()` when font_size < 24
 - Helvetica and Courier New ship with macOS. if you install additional fonts, Inter and JetBrains Mono are good upgrades

@@ -22,6 +22,7 @@ RED = "#f87171"
 BLUE = "#60a5fa"
 YELLOW = "#facc15"
 WHITE = "#e2e8f0"
+DIM = "#8888a8"
 
 # ── fonts ────────────────────────────────────────────────────
 FONT_TEXT = "Helvetica"
@@ -46,19 +47,17 @@ class S01_Intro(Scene):
 
     def construct(self):
         d = DUR["intro"]
-        elapsed = 0
+        e = 0
 
-        self.wait(VISUAL_DELAY); elapsed += VISUAL_DELAY
+        self.wait(VISUAL_DELAY); e += VISUAL_DELAY
 
         # "opening line goes here" — title appears with the words
         # NOTE: ~2x font sizes vs landscape for phone readability
         title = Text("Title", font=FONT_TEXT, font_size=144, color=WHITE)
-        self.play(FadeIn(title), run_time=0.8)
-        elapsed += 0.8
+        self.play(FadeIn(title), run_time=0.8); e += 0.8
 
         # "second phrase" — hold, then animate when phrase lands ~2.5s
-        self.wait(1.7)
-        elapsed += 1.7
+        self.wait(1.7); e += 1.7
         # ... next animation here ...
 
-        self.wait(max(d - elapsed, 0.1))
+        self.wait(max(d - e, 0.1))
