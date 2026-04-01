@@ -113,9 +113,12 @@ record_segment() {
 
                 read -rp "  (press ENTER to stop recording) "
 
-                kill $REC_PID 2>/dev/null
-                wait $REC_PID 2>/dev/null
-                [ -n "$FFPLAY_PID" ] && kill $FFPLAY_PID 2>/dev/null && wait $FFPLAY_PID 2>/dev/null
+                kill $REC_PID 2>/dev/null || true
+                wait $REC_PID 2>/dev/null || true
+                if [ -n "$FFPLAY_PID" ]; then
+                    kill $FFPLAY_PID 2>/dev/null || true
+                    wait $FFPLAY_PID 2>/dev/null || true
+                fi
 
                 local rec_dur
                 rec_dur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$vo_file" 2>/dev/null)
