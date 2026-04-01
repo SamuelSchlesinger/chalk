@@ -335,7 +335,7 @@ the composite step:
 ### useful primitives
 
 - `MathTex(r"...")` — LaTeX math (no kerning issues). `{{ }}` double braces for sub-part morphing
-- `Text("...", font=FONT_TEXT)` — plain text. always pass `font=` explicitly (see fonts section below)
+- `Text("...", font_size=48)` — plain text. default font works at font_size >= 24 (see fonts section below)
 - `Arrow(start, end)` — animate with `GrowArrow()`
 - `Graph(vertices, edges, layout=...)` — network graphs
 - `SurroundingRectangle(obj)` — highlight box
@@ -343,23 +343,22 @@ the composite step:
 
 ### fonts
 
-MathTex renders through LaTeX and is immune to kerning bugs. Text() renders through Pango/Cairo and has a known kerning bug with some fonts at small sizes. Always use explicit font configuration:
+MathTex renders through LaTeX and is immune to kerning bugs. Text() renders through Pango/Cairo and has a known kerning bug at small font sizes (< 24) where letters bunch together. The default font works well at font_size >= 24; only pass `font=` explicitly if you encounter kerning issues at a specific size.
 
 ```python
 # defined at the top of timed_scenes.py
-FONT_TEXT = "Helvetica"       # regular text — ships with macOS, safe kerning
 FONT_MONO = "Courier New"    # code snippets, labels — ships with macOS
 
 # usage
-Text("hello", font=FONT_TEXT, font_size=48, color=WHITE)
+Text("hello", font_size=48, color=WHITE)
 Text("x = 42", font=FONT_MONO, font_size=36, color=GREEN)
 MathTex(r"\sqrt{2}")  # no font= needed, uses LaTeX
 ```
 
 Rules:
-- **always pass `font=`** to `Text()` — Manim's default font has a kerning bug where letters bunch together at small sizes (verified at 1080p). specifying any named font avoids it
 - use `MathTex(r"\text{...}")` instead of `Text()` when font_size < 24
-- Helvetica and Courier New ship with macOS. if you install additional fonts, Inter and JetBrains Mono are good upgrades
+- if you see kerning issues at a specific size, pass `font="Helvetica"` (or another tested sans-serif) to that `Text()` call
+- Courier New ships with macOS. if you install additional fonts, JetBrains Mono is a good monospace upgrade
 
 ### animation patterns
 
@@ -390,8 +389,7 @@ self.play(obj.animate.set_fill(GREEN, opacity=0.8))         # color change
 - **partial matches** — if a phrase isn't found verbatim (e.g. you said "the abstraction" but searched for "abstraction"), the tool falls back to single-word partial matching
 
 ### manim
-- **always pass `font=FONT_TEXT` to `Text()`** — the default font triggers kerning bugs. use Helvetica or another tested sans-serif. see "fonts" section above
-- **keep `Text()` font_size ≥ 24** — Manim's `Text` class has a known kerning bug where small font sizes cause letters to bunch together with uneven spacing. this is especially visible at 1080p. `MathTex` is not affected. if you need small text, use `MathTex(r"\text{...}")` instead
+- **keep `Text()` font_size ≥ 24** — Manim's `Text` class has a known kerning bug where small font sizes cause letters to bunch together with uneven spacing. this is especially visible at 1080p. `MathTex` is not affected. if you need small text, use `MathTex(r"\text{...}")` instead. if you encounter kerning issues at larger sizes, pass `font="Helvetica"` explicitly
 - **use VISUAL_DELAY** — start each scene with `self.wait(VISUAL_DELAY)` (typically 1.5s) so the first visual has a moment to appear before narration begins. include VISUAL_DELAY in each DUR value and update DUR to match actual voiceover durations after recording
 - **always specify scene names when rendering** — `manim render -ql timed_scenes.py` without a scene name triggers an interactive prompt that breaks automation. render each scene explicitly in a loop
 - **one scene class per segment** — much easier to time than monolithic scenes

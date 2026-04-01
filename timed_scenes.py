@@ -18,9 +18,10 @@ DIM = "#8888a8"
 
 # ── fonts ────────────────────────────────────────────────────
 # MathTex uses LaTeX (no kerning issues). Text() uses Pango/Cairo
-# and has a known kerning bug with some fonts. Always pass font=
-# explicitly — never rely on the default.
-FONT_TEXT = "Helvetica"       # regular text — ships with macOS, safe kerning
+# and has a known kerning bug at small font sizes (< 24). Use
+# MathTex(r"\text{...}") for small text. The default font is fine
+# for font_size >= 24; pass font= explicitly only if you see
+# kerning issues.
 FONT_MONO = "Courier New"    # code snippets, labels — ships with macOS
 
 # ── visual delay (seconds) ───────────────────────────────────
@@ -50,7 +51,7 @@ class S01_Intro(Scene):
         self.wait(VISUAL_DELAY); e += VISUAL_DELAY
 
         # "opening line goes here" — title appears with the words
-        title = Text("Title", font=FONT_TEXT, font_size=72, color=WHITE)
+        title = Text("Title", font_size=72, color=WHITE)
         self.play(FadeIn(title), run_time=0.8); e += 0.8
 
         # "second phrase" — hold, then animate when phrase lands ~2.5s

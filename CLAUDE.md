@@ -21,22 +21,21 @@ Project files (outline.md, script.md, timed_scenes.py, timed_scenes_shorts.py, v
 
 MathTex renders through LaTeX (Computer Modern by default) and is immune to kerning bugs.
 
-Text() renders through Pango/Cairo and has a **known kerning bug** that causes letters to bunch together at small sizes or with certain fonts. All video projects should use explicit font configuration:
+Text() renders through Pango/Cairo and has a **known kerning bug at small font sizes** (< 24) where letters bunch together. The default font is fine for font_size >= 24. Only pass `font=` explicitly if you encounter kerning issues at your target resolution.
 
 ```python
 # ── fonts ────────────────────────────────────────────────────
-FONT_TEXT = "Helvetica"       # regular text — ships with macOS, safe kerning
 FONT_MONO = "Courier New"    # code snippets, labels — ships with macOS
 ```
 
 Rules:
 - **Mathematical content:** always use `MathTex(r"...")`
-- **Regular text:** always use `Text("...", font=FONT_TEXT)` — never rely on Manim's default font
+- **Regular text:** `Text("...", font_size=48, color=WHITE)` — the default font works well at normal sizes
 - **Code/labels:** use `Text("...", font=FONT_MONO)`
 - **Small text:** use `MathTex(r"\text{...}")` instead of `Text()` when font_size < 24
-- **Never omit the font parameter** on `Text()` — the default font triggers kerning bugs where letters bunch together (verified at 1080p)
+- If you see kerning issues at a specific size, pass `font="Helvetica"` (or another tested sans-serif) to that `Text()` call
 
-Helvetica and Courier New ship with macOS and are verified safe. If you install additional fonts, Inter and JetBrains Mono are good upgrades. Avoid decorative or serif fonts unless tested at target resolution.
+Courier New ships with macOS. If you install additional fonts, JetBrains Mono is a good monospace upgrade. Avoid decorative or serif fonts unless tested at target resolution.
 
 ## writing the script
 
@@ -58,7 +57,6 @@ Before writing or editing script content, read the "voice and tone" and "LLM-ism
 See README.md "manim reference" and "lessons learned" for the full list. The most common mistakes:
 
 - **Text() font_size ≥ 24.** Kerning bug below this. Use `MathTex(r"\text{...}")` for smaller.
-- **Always pass `font=FONT_TEXT`** (or `FONT_MONO`) to `Text()`.
 - **Start each scene with `self.wait(VISUAL_DELAY)`.** Gives the first visual a moment before narration.
 - **Track elapsed time.** `self.wait(max(target - elapsed, 0.1))` at the end of each scene.
 - **Specify scene names when rendering.** Omitting triggers an interactive prompt that breaks automation.
