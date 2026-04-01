@@ -25,7 +25,6 @@ WHITE = "#e2e8f0"
 DIM = "#8888a8"
 
 # ── fonts ────────────────────────────────────────────────────
-FONT_TEXT = "Helvetica"
 FONT_MONO = "Courier New"
 
 # ── visual delay (seconds) ───────────────────────────────────
@@ -53,7 +52,7 @@ class S01_Intro(Scene):
 
         # "opening line goes here" — title appears with the words
         # NOTE: ~2x font sizes vs landscape for phone readability
-        title = Text("Title", font=FONT_TEXT, font_size=144, color=WHITE)
+        title = Text("Title", font_size=144, color=WHITE)
         self.play(FadeIn(title), run_time=0.8); e += 0.8
 
         # "second phrase" — hold, then animate when phrase lands ~2.5s
