@@ -107,13 +107,26 @@ square both sides. two equals alpha squared over beta squared. multiply through:
 
 #### voice and tone
 
-the goal is **clarity with flair** — not hype. the best math communication lets the ideas do the work.
+the goal is **clarity with flair** — not hype. the best math communication lets the ideas do the work. and the best scripts read like someone thinking out loud at a whiteboard, not like a textbook being read aloud.
+
+##### what good script voice sounds like
+
+- **build ideas step by step.** don't front-load a definition and then explain it. introduce each piece as you need it, so the viewer follows the thought process. "a category consists of four things. there are the objects... there are the morphisms... there is also a composition rule..." reads better than "a category is a collection of objects, morphisms, a composition rule, and identity morphisms satisfying two laws."
+- **use "you", "we", "our" naturally.** the viewer is in the room with you. "suppose you have a morphism f from A to B" is warmer than "let f: A → B be a morphism." "our first example is Set" beats "the first example is Set."
+- **weave examples alongside abstractions.** don't state the full abstract definition and then give examples. interleave them. state part of the definition, show what it looks like in a concrete case, then continue.
+- **connect ideas to what came before.** "now that we have the definition of a category, we can say what it means for two objects to be the same" is better than jumping to "a morphism f is an isomorphism if..." Narrate your thought process — why are we talking about this next?
+- **vary sentence length.** short declarative sentences mixed with longer explanatory ones. a paragraph of uniform long sentences reads like a textbook. a paragraph of all short sentences feels choppy.
+- **let the math carry the weight.** if you've explained a concept well, you don't need to tell the viewer it's interesting. the explanation does that work.
+
+bad: "a functor F from C to D sends each object in C to an object in D, and each morphism in C to a morphism in D. there are two conditions."
+good: "we have categories — objects, morphisms, composition, identities. the next question is how different categories relate to each other. the answer is a functor. a functor F from a category C to a category D does two things. it sends each object in C to an object in D, and it sends each morphism in C to a morphism in D. but it can't send them arbitrarily — it has to respect the structure."
+
+##### ground rules
 
 - **explain, don't sell.** if a result is beautiful, say why — don't just say "and here's where it gets wild."
 - **be precise.** use correct terminology and define it. vagueness isn't accessible, it's confusing.
 - **earn the wonder.** set up a concept carefully and the moment it clicks is naturally exciting. no hype needed.
-- **conversational, not performative.** talk to the viewer like you're explaining to a smart friend, not presenting to an audience.
-- **cut the filler.** "let's", "so basically", "here's the thing" — these pad runtime without adding understanding.
+- **cut the filler.** "so basically", "here's the thing" — these pad runtime without adding understanding.
 - **lowercase is fine, but don't force casualness.** "this gives us injectivity" is better than "boom — injectivity."
 
 bad: "both alpha and beta are even. boom. contradiction."

@@ -41,11 +41,14 @@ Courier New ships with macOS. If you install additional fonts, JetBrains Mono is
 
 script.md is co-authored by human and AI. **The human voice is the critical value add** — the AI helps with structure, accuracy, and iteration, but the human's perspective and editorial judgment is what makes the video worth watching.
 
-Before writing or editing script content, read the "voice and tone" and "LLM-isms to avoid" sections of README.md. The most critical rules:
+Before writing or editing script content, read the "voice and tone" and "LLM-isms to avoid" sections of README.md. The most important guidance:
+
+**Write conversationally, not like a textbook.** Build ideas step by step — introduce each piece as you need it, use "you/we/our" naturally, weave examples alongside abstractions instead of stating full definitions then illustrating them. Connect each idea to what came before ("now that we have X, we can ask Y"). Vary sentence length. The script should read like someone thinking out loud at a whiteboard, explaining to a smart friend.
+
+The avoidance rules matter too, but they're second-order — getting the conversational voice right prevents most of the problems automatically:
 
 - **Explain, don't sell.** Let the math do the work. If a result is beautiful, say why — don't hype it.
 - **Be precise.** Use correct terminology. Vagueness isn't accessible, it's confusing.
-- **Cut filler.** "let's", "so basically", "here's the thing" — these pad runtime without adding understanding.
 - **Avoid significance inflation.** "Remarkable", "profound", "elegant", "pivotal", "crucial" — if the explanation is good, you don't need the adjective.
 - **No "not just X — Y" parallelisms.** Rewrite as direct statements.
 - **No rule-of-three lists.** One example is enough. If you have three, two need to go.
