@@ -35,7 +35,7 @@ fi
 # Change this to match your video title.
 SLUG="my_video"
 
-mkdir -p "$OUT/segments"
+mkdir -p "$OUT/segments" "$CLIPS"
 
 # ── segment registry ──────────────────────────────────────────
 # id:SceneClass:audio_stem:description
@@ -73,7 +73,7 @@ record_segment() {
 
     if [ -f "$vo_file" ]; then
         local existing_dur
-        existing_dur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$vo_file" 2>/dev/null)
+        existing_dur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$vo_file" 2>/dev/null || echo "?")
         echo "  (existing recording: ${existing_dur}s)"
     fi
 
@@ -120,8 +120,17 @@ record_segment() {
                     wait $FFPLAY_PID 2>/dev/null || true
                 fi
 
+                if [ ! -f "$vo_file" ]; then
+                    echo ""
+                    echo "  ERROR: recording not produced at $vo_file"
+                    echo "  (check mic permissions and that $CLIPS exists)"
+                    read -rp "  (r)etry / (s)kip? " retry
+                    [ "$retry" = "r" ] && continue
+                    return
+                fi
+
                 local rec_dur
-                rec_dur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$vo_file" 2>/dev/null)
+                rec_dur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$vo_file" 2>/dev/null || echo "?")
                 echo ""
                 echo "  Saved: $vo_file (${rec_dur}s)"
 
