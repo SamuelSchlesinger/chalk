@@ -4,7 +4,7 @@
 
 > **[DIRECTOR: clear, unhurried. state the question directly.]**
 
-(opening line goes here)
+opening line goes here
 
 > **[CUT TO MANIM: S01_Intro scene]**
 > title card
@@ -13,7 +13,7 @@
 
 > **[DIRECTOR: measured pace. let the idea settle.]**
 
-(closing line goes here)
+closing line goes here
 
-> **[CUT TO MANIM: closing scene]**
+> **[CUT TO MANIM: S02_Closing scene]**
 > fade to black

@@ -39,6 +39,7 @@ my-video/
 ├── setup.sh                   # run once to set up environment
 ├── render.sh                  # render all scenes (handles quality + shorts)
 ├── voiceover.sh               # record yourself, composite, check durations
+├── sync_scripts.py            # copy spoken script text into voiceover prompts
 ├── transcribe_timing.py       # whisper-based voiceover timing analysis
 ├── outline.md                 # collaborative outline — intellectual arc and structure
 ├── script.md                  # co-authored script — single source of truth for production
@@ -191,12 +192,12 @@ the outline feeds the script, and the script feeds production:
 outline.md                      ← collaborative planning
     └── script.md               ← co-authored (single source of truth for production)
             ├── timed_scenes.py         — animation content + durations
-            └── voiceover.sh            — segment mapping + script text
+            └── voiceover.sh            — segment mapping + recording prompts
 ```
 
-**when you change a spoken line:** update script.md, update SCRIPTS in voiceover.sh, re-record the segment, update DUR in timed_scenes.py if duration changed.
+**when you change a spoken line:** update script.md, run `python sync_scripts.py`, re-record the segment, update DUR in timed_scenes.py if duration changed.
 
-**when you add a segment:** add to all three files. use "b" suffixes for insertions (e.g. `03b_square`).
+**when you add a segment:** add it to script.md, voiceover.sh's SEGMENTS array, timed_scenes.py, and timed_scenes_shorts.py. use "b" suffixes for insertions (e.g. `03b_square`). then run `python sync_scripts.py --check` before recording.
 
 ### step 2: build timed animations
 

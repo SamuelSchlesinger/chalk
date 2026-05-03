@@ -16,19 +16,31 @@ echo "  clips/ and output/ ready"
 
 # ── system dependencies ──────────────────────────────────────
 echo "  ensuring system deps (ffmpeg, cairo, pango, sox)..."
+if ! command -v brew >/dev/null 2>&1; then
+    echo "ERROR: Homebrew is required to install system dependencies."
+    echo "  install it from https://brew.sh, then re-run ./setup.sh"
+    exit 1
+fi
 brew install ffmpeg cairo pango sox 2>/dev/null
+
+if ! command -v latex >/dev/null 2>&1 && ! command -v pdflatex >/dev/null 2>&1; then
+    echo "ERROR: LaTeX was not found, and Manim MathTex needs it."
+    echo "  install MacTeX or BasicTeX, then re-run ./setup.sh"
+    exit 1
+fi
 
 # ── python venv ──────────────────────────────────────────────
 if [ -d .venv ]; then
-    echo "  .venv exists, skipping"
+    echo "  .venv exists"
 else
     echo "  creating .venv..."
     python3 -m venv .venv
-    .venv/bin/pip install -q manim mlx-whisper
 fi
+echo "  ensuring python packages (manim, mlx-whisper)..."
+.venv/bin/python -m pip install -q manim mlx-whisper
 
 # ── make scripts executable ──────────────────────────────────
-chmod +x render.sh voiceover.sh
+chmod +x render.sh voiceover.sh setup.sh
 
 echo ""
 echo "=== done ==="

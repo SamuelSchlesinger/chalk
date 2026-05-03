@@ -41,16 +41,82 @@ mkdir -p "$OUT/segments" "$CLIPS"
 # id:SceneClass:audio_stem:description
 SEGMENTS=(
     "01:S01_Intro:01_intro:intro"
-    # add segments here...
-    # "02:S02_Concept:02_concept:the core concept"
+    "02:S02_Closing:02_closing:closing"
 )
 
 # ── script text for recording prompts ─────────────────────────
 # index matches SEGMENTS order
 SCRIPTS=(
-    "opening line goes here"
-    # add matching script text...
+    'opening line goes here'
+    'closing line goes here'
 )
+
+probe_duration() {
+    local path="$1"
+    if [ ! -f "$path" ]; then
+        return 0
+    fi
+    ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$path" 2>/dev/null || true
+}
+
+format_duration() {
+    python3 - "$1" <<'PY'
+import sys
+
+try:
+    print(f"{float(sys.argv[1]):.1f}s")
+except (IndexError, ValueError):
+    print("missing")
+PY
+}
+
+diff_duration() {
+    python3 - "$1" "$2" <<'PY'
+import sys
+
+audio = float(sys.argv[1])
+video = float(sys.argv[2])
+diff = audio - video
+print(f"{diff:+.1f}s" + (" !!!" if abs(diff) > 2 else ""))
+PY
+}
+
+require_segment_assets() {
+    local video_dir="$1" label="$2"
+    local reported=false
+
+    report_missing() {
+        if ! $reported; then
+            echo "ERROR: missing required assets for $label composite:"
+            reported=true
+        fi
+        echo "  $1"
+    }
+
+    for entry in "${SEGMENTS[@]}"; do
+        IFS=: read -r num scene audio desc <<< "$entry"
+        local video_file="$video_dir/${scene}.mp4"
+        local audio_file="$CLIPS/vo_${audio}.wav"
+
+        if [ ! -f "$video_file" ]; then
+            report_missing "video for segment $num ($desc): $video_file"
+        elif [ -z "$(probe_duration "$video_file")" ]; then
+            report_missing "unreadable video for segment $num ($desc): $video_file"
+        fi
+
+        if [ ! -f "$audio_file" ]; then
+            report_missing "audio for segment $num ($desc): $audio_file"
+        elif [ -z "$(probe_duration "$audio_file")" ]; then
+            report_missing "unreadable audio for segment $num ($desc): $audio_file"
+        fi
+    done
+
+    if $reported; then
+        echo ""
+        echo "Render missing videos with ./render.sh and record missing audio with ./voiceover.sh record."
+        exit 1
+    fi
+}
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 # recording
@@ -66,14 +132,19 @@ record_segment() {
     echo "  Segment $num: $desc"
 
     local vdur
-    vdur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$video_file" 2>/dev/null)
-    [ -n "$vdur" ] && echo "  Video duration: ${vdur}s"
+    vdur=$(probe_duration "$video_file")
+    if [ -n "$vdur" ]; then
+        echo "  Video duration: ${vdur}s"
+    else
+        echo "  Video: not rendered yet ($video_file)"
+    fi
     echo "  Output: $vo_file"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
     if [ -f "$vo_file" ]; then
         local existing_dur
-        existing_dur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$vo_file" 2>/dev/null || echo "?")
+        existing_dur=$(probe_duration "$vo_file")
+        [ -z "$existing_dur" ] && existing_dur="?"
         echo "  (existing recording: ${existing_dur}s)"
     fi
 
@@ -130,7 +201,8 @@ record_segment() {
                 fi
 
                 local rec_dur
-                rec_dur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$vo_file" 2>/dev/null || echo "?")
+                rec_dur=$(probe_duration "$vo_file")
+                [ -z "$rec_dur" ] && rec_dur="?"
                 echo ""
                 echo "  Saved: $vo_file (${rec_dur}s)"
 
@@ -172,14 +244,28 @@ do_durations() {
         local video_file="$VIDEO/${scene}.mp4"
         local vo_file="$CLIPS/vo_${audio}.wav"
 
-        vdur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$video_file" 2>/dev/null)
+        vdur=$(probe_duration "$video_file")
+        if [ -n "$vdur" ]; then
+            vdisp=$(format_duration "$vdur")
+        else
+            vdisp="missing"
+        fi
 
         if [ -f "$vo_file" ]; then
-            adur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$vo_file" 2>/dev/null)
-            diff=$(python3 -c "d=float('${adur}')-float('${vdur}'); print(f'{d:+.1f}s' + (' !!!' if abs(d)>2 else ''))")
-            printf "%-4s  %-30s  %7.1fs  %7.1fs  %s\n" "$num" "${desc:0:30}" "$vdur" "$adur" "$diff"
+            adur=$(probe_duration "$vo_file")
+            if [ -n "$adur" ]; then
+                adisp=$(format_duration "$adur")
+            else
+                adisp="unreadable"
+            fi
+            if [ -n "$vdur" ] && [ -n "$adur" ]; then
+                diff=$(diff_duration "$adur" "$vdur")
+            else
+                diff="n/a"
+            fi
+            printf "%-4s  %-30s  %8s  %8s  %s\n" "$num" "${desc:0:30}" "$vdisp" "$adisp" "$diff"
         else
-            printf "%-4s  %-30s  %7.1fs  %8s  %s\n" "$num" "${desc:0:30}" "$vdur" "—" "(no recording)"
+            printf "%-4s  %-30s  %8s  %8s  %s\n" "$num" "${desc:0:30}" "$vdisp" "—" "(no recording)"
         fi
     done
     echo ""
@@ -191,6 +277,7 @@ do_durations() {
 
 do_composite() {
     echo "=== compositing segments ==="
+    require_segment_assets "$VIDEO" "landscape"
 
     for entry in "${SEGMENTS[@]}"; do
         IFS=: read -r num scene audio desc <<< "$entry"
@@ -199,20 +286,20 @@ do_composite() {
         local output_file="$OUT/segments/seg_${num}.mp4"
 
         if [ ! -f "$audio_file" ]; then
-            echo "WARNING: no audio for segment $num"
-            continue
+            echo "ERROR: no audio for segment $num"
+            exit 1
         fi
 
         if [ ! -f "$video_file" ]; then
-            echo "WARNING: missing video $video_file"
-            continue
+            echo "ERROR: missing video $video_file"
+            exit 1
         fi
 
         echo "  $num ($scene)..."
 
         # if audio is longer than video, freeze last frame
-        adur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$audio_file" 2>/dev/null)
-        vdur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$video_file" 2>/dev/null)
+        adur=$(probe_duration "$audio_file")
+        vdur=$(probe_duration "$video_file")
         longer=$(python3 -c "print('audio' if float('${adur}') > float('${vdur}') + 0.5 else 'ok')")
 
         if [ "$longer" = "audio" ]; then
@@ -301,6 +388,7 @@ do_composite_shorts() {
 
     echo "=== compositing shorts segments ==="
     echo "  source: $SHORTS_VIDEO"
+    require_segment_assets "$SHORTS_VIDEO" "shorts"
 
     for entry in "${SEGMENTS[@]}"; do
         IFS=: read -r num scene audio desc <<< "$entry"
@@ -309,19 +397,19 @@ do_composite_shorts() {
         local output_file="$SHORTS_OUT/segments/seg_${num}.mp4"
 
         if [ ! -f "$audio_file" ]; then
-            echo "WARNING: no audio for segment $num"
-            continue
+            echo "ERROR: no audio for segment $num"
+            exit 1
         fi
 
         if [ ! -f "$video_file" ]; then
-            echo "WARNING: missing video $video_file"
-            continue
+            echo "ERROR: missing video $video_file"
+            exit 1
         fi
 
         echo "  $num ($scene)..."
 
-        adur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$audio_file" 2>/dev/null)
-        vdur=$(ffprobe -v quiet -show_entries format=duration -of csv=p=0 "$video_file" 2>/dev/null)
+        adur=$(probe_duration "$audio_file")
+        vdur=$(probe_duration "$video_file")
         longer=$(python3 -c "print('audio' if float('${adur}') > float('${vdur}') + 0.5 else 'ok')")
 
         if [ "$longer" = "audio" ]; then

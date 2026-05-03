@@ -34,6 +34,7 @@ VISUAL_DELAY = 1.5
 # keep in sync with voiceover.sh
 DUR = {
     "intro": 6.0 + VISUAL_DELAY,
+    "closing": 6.0 + VISUAL_DELAY,
     # "concept": 12.0 + VISUAL_DELAY,
 }
 
@@ -60,3 +61,22 @@ class S01_Intro(Scene):
         # ... next animation here ...
 
         self.wait(max(d - e, 0.1))
+
+
+class S02_Closing(Scene):
+    """closing line goes here."""
+
+    def setup(self):
+        self.camera.background_color = BG
+
+    def construct(self):
+        d = DUR["closing"]
+        e = 0
+
+        self.wait(VISUAL_DELAY); e += VISUAL_DELAY
+
+        title = Text("Closing", font_size=144, color=WHITE)
+        self.play(FadeIn(title), run_time=0.8); e += 0.8
+
+        self.wait(max(d - e - 0.8, 0.1))
+        self.play(FadeOut(title), run_time=0.8)

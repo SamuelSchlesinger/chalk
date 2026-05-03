@@ -34,6 +34,7 @@ VISUAL_DELAY = 1.5
 # voiceover, update to actual durations: voiceover_duration + VISUAL_DELAY.
 DUR = {
     "intro": 6.0 + VISUAL_DELAY,
+    "closing": 6.0 + VISUAL_DELAY,
     # "concept": 12.0 + VISUAL_DELAY,
 }
 
@@ -64,5 +65,23 @@ class S01_Intro(Scene):
         # self.wait(max(target_e - e, 0.1)); e = target_e
         # self.play(SomeAnimation(...), run_time=0.5); e += 0.5
 
-        self.wait(max(d - e - 1.0, 0.1))
-        # fade_all(self, run_time=1.0)  # uncomment when you have content
+        self.wait(max(d - e, 0.1))
+
+
+class S02_Closing(Scene):
+    """closing line goes here."""
+
+    def setup(self):
+        self.camera.background_color = BG
+
+    def construct(self):
+        d = DUR["closing"]
+        e = 0
+
+        self.wait(VISUAL_DELAY); e += VISUAL_DELAY
+
+        title = Text("Closing", font_size=72, color=WHITE)
+        self.play(FadeIn(title), run_time=0.8); e += 0.8
+
+        self.wait(max(d - e - 0.8, 0.1))
+        self.play(FadeOut(title), run_time=0.8)
